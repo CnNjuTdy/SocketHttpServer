@@ -6,6 +6,7 @@
 import socket
 import queue
 import threading
+import urllib.parse
 
 general_header_field = [
     'Cache-Control', 'Connection', 'Date', 'Pragma', 'Trailer', 'Transfer-Encoding', 'Upgrade', 'Via', 'Warning'
@@ -25,6 +26,7 @@ entity_header_field = [
 ]
 
 
+# 线程类
 class WorkThread(threading.Thread):
     def __init__(self, work_queue):
         super().__init__()
@@ -38,7 +40,8 @@ class WorkThread(threading.Thread):
             self.work_queue.task_done()
 
 
-class ThreadPoolManger():
+# 连接池管理
+class ThreadPoolManger:
     def __init__(self, thread_number):
         self.thread_number = thread_number
         self.work_queue = queue.Queue()
@@ -50,49 +53,53 @@ class ThreadPoolManger():
         self.work_queue.put((func, args))
 
 
+# Description: 请求主函数，将会交给线程池中的一个线程来执行
+# Input:       连接，地址
+# Output:      None
 def tcp_link(connection, address):
-    request = connection.recv(1024).decode('utf8')
-    print(request)
+    while True:
+        buf = connection.recv(128)
+        print(buf)
+        print(len(buf))
+        if not buf:
+            break
+    print('xxxxxxx')
+    connection.send('Hello world!'.encode('utf8'))
     connection.close()
 
 
 class Server:
     def __init__(self, host='localhost', port=5000):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # self.socket.setblocking(False)
         self.socket.bind((host, port))
-        self.socket.listen(10)
+        self.socket.listen(1)
         self.thread_pool = ThreadPoolManger(5)
         print('Serving HTTP on port %d' % port)
 
     def start(self):
         while True:
-            client_connection, client_address = self.socket.accept()
-            self.thread_pool.add_work(tcp_link, *(client_connection, client_address))
+            # try:
+            connection, address = self.socket.accept()
+            self.thread_pool.add_work(tcp_link, *(connection, address))
+        # except BlockingIOError:
+        #     pass
 
 
-# class MyTCPHandler(socketserver.BaseRequestHandler):
-#     def handle(self):
-#         while True:
-#             # 每次循环是一个1024子节的数据，
-#             data = self.request.recv(1024).decode('UTF-8', 'ignore')
-#             if not data:
-#                 break
-#             # todo 解析请求内容
-#             d = parse_request(data)
-#             # for key, value in d.items():
-#             #     print(key + ' : ' + str(value))
-#             feedback_data = ("回复\"" + data + "\":\n\t你好，我是Server端").encode("utf8")
-#             # todo 封装返回数据，包括状态码
-#             self.request.sendall(feedback_data)
+class HttpError(Exception):
+    def __init__(self, code='500', msg=None):
+        Exception.__init__(self, msg)
+        self.code = code
+        self.msg = msg
 
 
-class ParseRequestError(Exception):
+class ParseRequestError(HttpError):
     def __init__(self, msg=None, parameter=None, para_value=None):
         err = msg if msg else 'The parameter "{0}" is not legal:{1}'.format(parameter, para_value)
-        Exception.__init__(self, err)
         self.parameter = parameter
         self.para_value = para_value
+        HttpError.__init__(self, msg=err)
 
 
 # Description: 解析请求数据，期待异常parse_request_error
@@ -119,9 +126,7 @@ Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
 
 
 def parse_request(data):
-    print('xxxxxx')
-    print(data)
-    parse_result = {'method': '', 'url': '', 'http_version': '', 'headers': {}, 'parameters': []}
+    parse_result = {'method': '', 'url': '', 'http_version': '', 'headers': {}, 'parameters': [], 'body': []}
     lines = [line.strip() for line in data.strip().split('\r\n')]
     try:
         parse_result['method'], parse_result['url'], parse_result['http_version'] = lines[0].split(' ')
@@ -130,21 +135,10 @@ def parse_request(data):
             msg='First line of request data have to be Request-Line containing method, url and http version')
     if parse_result['method'] == 'GET':
         url = parse_result['url']
-        # 找到第一个?，并按照第一个?分割为url和paras
-        temp_index = url.index('?')
-        if temp_index >= 0:
-            true_url = url[:temp_index]
-            temp_paras = url[temp_index + 1:].split('&')
-            paras = []
-            # 一些自动转义的还原出来(%20表示空格，中文的变成中文）
-            for para in temp_paras:
-                pass
-        else:
-            true_url = url
-            paras = []
-        parse_result['url'] = true_url
-        parse_result['paras'] = paras
-
+        try:
+            parse_result['url'], parse_result['paras'] = parse_url(url)
+        except ParseRequestError as e:
+            raise e
         for line in lines[1:]:
             if len(line) == 0:
                 continue
@@ -155,7 +149,53 @@ def parse_request(data):
                 raise ParseRequestError(msg='Too much keys in request data: %s' % line)
             else:
                 raise ParseRequestError(msg='Get request has no body like %s' % line)
+    elif parse_result['method'] == 'POST':
+        url = parse_result['url']
+        try:
+            parse_result['url'], parse_result['paras'] = parse_url(url)
+        except ParseRequestError as e:
+            raise e
+        for line in lines[1:]:
+            if len(line) == 0:
+                continue
+            if len(line.split(': ')) == 2:
+                key, value = line.split(': ')
+                parse_result['headers'][key] = value
+            elif len(line.split(': ')) > 2:
+                raise ParseRequestError(msg='Too much keys in request data: %s' % line)
+
+    else:
+        pass
+
     return parse_result
+
+
+# Description: 解析出url中的参数
+# Input:       url
+# Output:      true_url,{para_key:para_value}
+def parse_url(url):
+    # 找到第一个?，并按照第一个?分割为url和paras(用index的话如果没有?会报错)
+    question_mark_index = url.find('?')
+    if question_mark_index >= 0:
+        true_url = url[:question_mark_index]
+        temp_paras = url[question_mark_index + 1:].split('&')
+        paras = {}
+        for para in temp_paras:
+            # 一些自动转义的还原出来(%20表示空格，中文的变成中文）
+            para = urllib.parse.unquote(para)
+            # 按照第一个=分割
+            equal_index = para.find('=')
+            if equal_index == 0:
+                raise ParseRequestError(msg='Get parameters has no key!  %s' % para)
+            elif equal_index < 0:
+                raise ParseRequestError(msg='Get parameters parses wrongly. %s' % para)
+            else:
+                para_key, para_value = para[:equal_index], para[equal_index + 1:]
+                paras[para_key] = para_value
+    else:
+        true_url = url
+        paras = []
+    return true_url, paras
 
 
 if __name__ == '__main__':
