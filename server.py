@@ -3,7 +3,9 @@
 # Author     : tangdaye
 # Description: todo
 
-import socketserver
+import socket
+import queue
+import threading
 
 general_header_field = [
     'Cache-Control', 'Connection', 'Date', 'Pragma', 'Trailer', 'Transfer-Encoding', 'Upgrade', 'Via', 'Warning'
@@ -23,28 +25,66 @@ entity_header_field = [
 ]
 
 
+class WorkThread(threading.Thread):
+    def __init__(self, work_queue):
+        super().__init__()
+        self.work_queue = work_queue
+        self.daemon = True
+
+    def run(self):
+        while True:
+            func, args = self.work_queue.get()
+            func(*args)
+            self.work_queue.task_done()
+
+
+class ThreadPoolManger():
+    def __init__(self, thread_number):
+        self.thread_number = thread_number
+        self.work_queue = queue.Queue()
+        for i in range(self.thread_number):  # 生成一些线程来执行任务
+            thread = WorkThread(self.work_queue)
+            thread.start()
+
+    def add_work(self, func, *args):
+        self.work_queue.put((func, args))
+
+
+def tcp_link(connection, address):
+    request = connection.recv(1024).decode('utf8')
+    print(request)
+    connection.close()
+
+
 class Server:
     def __init__(self, host='localhost', port=5000):
-        self.instance = socketserver.ThreadingTCPServer((host, port), MyTCPHandler)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind((host, port))
+        self.socket.listen(10)
+        self.thread_pool = ThreadPoolManger(5)
+        print('Serving HTTP on port %d' % port)
 
     def start(self):
-        self.instance.serve_forever()
-
-
-class MyTCPHandler(socketserver.BaseRequestHandler):
-    def handle(self):
         while True:
-            # 每次循环是一个
-            data = self.request.recv(1024).decode('UTF-8', 'ignore')
-            if not data:
-                break
-            # todo 解析请求内容
-            d = parse_request(data)
-            # for key, value in d.items():
-            #     print(key + ' : ' + str(value))
-            feedback_data = ("回复\"" + data + "\":\n\t你好，我是Server端").encode("utf8")
-            # todo 封装返回数据，包括状态码
-            self.request.sendall(feedback_data)
+            client_connection, client_address = self.socket.accept()
+            self.thread_pool.add_work(tcp_link, *(client_connection, client_address))
+
+
+# class MyTCPHandler(socketserver.BaseRequestHandler):
+#     def handle(self):
+#         while True:
+#             # 每次循环是一个1024子节的数据，
+#             data = self.request.recv(1024).decode('UTF-8', 'ignore')
+#             if not data:
+#                 break
+#             # todo 解析请求内容
+#             d = parse_request(data)
+#             # for key, value in d.items():
+#             #     print(key + ' : ' + str(value))
+#             feedback_data = ("回复\"" + data + "\":\n\t你好，我是Server端").encode("utf8")
+#             # todo 封装返回数据，包括状态码
+#             self.request.sendall(feedback_data)
 
 
 class ParseRequestError(Exception):
@@ -81,7 +121,7 @@ Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
 def parse_request(data):
     print('xxxxxx')
     print(data)
-    parse_result = {'method': '', 'url': '', 'http_version': '', 'headers': {}}
+    parse_result = {'method': '', 'url': '', 'http_version': '', 'headers': {}, 'parameters': []}
     lines = [line.strip() for line in data.strip().split('\r\n')]
     try:
         parse_result['method'], parse_result['url'], parse_result['http_version'] = lines[0].split(' ')
@@ -92,9 +132,18 @@ def parse_request(data):
         url = parse_result['url']
         # 找到第一个?，并按照第一个?分割为url和paras
         temp_index = url.index('?')
-        if temp_index>=0:
-            true_url = url[:]
-        # 防止注入攻击，敏感词语添加转义字符
+        if temp_index >= 0:
+            true_url = url[:temp_index]
+            temp_paras = url[temp_index + 1:].split('&')
+            paras = []
+            # 一些自动转义的还原出来(%20表示空格，中文的变成中文）
+            for para in temp_paras:
+                pass
+        else:
+            true_url = url
+            paras = []
+        parse_result['url'] = true_url
+        parse_result['paras'] = paras
 
         for line in lines[1:]:
             if len(line) == 0:
