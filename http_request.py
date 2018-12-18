@@ -4,6 +4,7 @@
 # Description: 请求分析部分
 
 from http_error import ParseRequestError
+import http_response
 import urllib.parse
 
 
@@ -22,7 +23,11 @@ def pass_request(connection, addr):
         else:
             headers_index = buf.find('\r\n\r\n'.encode('utf8'))
             headers_buff += buf[:headers_index]
-            headers = parse_headers(headers_buff)
+            try:
+                headers = parse_headers(headers_buff)
+            except ParseRequestError:
+                # todo 请求出错 400
+                pass
             body_buff += buf[headers_index + 4:]
             break
     # 如果请求方法是post，会有body部分

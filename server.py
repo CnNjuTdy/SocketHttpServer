@@ -1,29 +1,12 @@
 # -*- coding: utf-8 -*-
 # Time       : 2018/12/11 11:46 PM
 # Author     : tangdaye
-# Description: todo
+# Description: 服务器
 
 import socket
 import queue
 import threading
-import http_request, http_response
-
-general_header_field = [
-    'Cache-Control', 'Connection', 'Date', 'Pragma', 'Trailer', 'Transfer-Encoding', 'Upgrade', 'Via', 'Warning'
-]
-request_header_field = [
-    'Accept', 'Accept-Charset', 'Accept-Encoding', 'Accept-Language', 'Authorization', 'Expect', 'From', 'Host',
-    'If-Match', 'If-Modified-Since', 'If-None-Match', 'If-Range', 'If-Unmodified-Since', 'Max-Forwards',
-    'Proxy-Authorization', 'Range', 'Referer', 'TE', 'User-Agent'
-]
-response_header_field = [
-    'Accept-Ranges', 'Age', 'ETag', 'Location', 'Proxy-Authenticate', 'Retry-After', 'Server', 'Vary',
-    'WWW-Authenticate'
-]
-entity_header_field = [
-    'Allow', 'Content-Encoding', 'Content-Language', 'Content-Length', 'Content-Location', 'Content-MD5',
-    'Content-Range', 'Content-Type', 'Expires', 'Last-Modified', 'extension-header'
-]
+import http_request, http_handle
 
 
 # 线程类
@@ -59,11 +42,8 @@ class ThreadPoolManger:
 def tcp_link(connection, address):
     # 获得请求头和body
     headers, body = http_request.pass_request(connection, address)
-    # todo 业务处理
-    print(headers)
-    print(body)
-    # todo 组装并返回response
-    connection.send('Hello world!'.encode('utf8'))
+    # 业务处理
+    http_handle.handle(headers, body, connection, address)
 
 
 class Server:

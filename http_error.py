@@ -5,7 +5,7 @@
 
 
 class HttpError(Exception):
-    def __init__(self, code='500', msg=None):
+    def __init__(self, code, msg=None):
         Exception.__init__(self, msg)
         self.code = code
         self.msg = msg
@@ -13,4 +13,4 @@ class HttpError(Exception):
 
 class ParseRequestError(HttpError):
     def __init__(self, msg=None):
-        HttpError.__init__(self, msg=msg, code='500')
+        HttpError.__init__(self, code='400', msg=msg)
