@@ -62,7 +62,9 @@ def static_resource(headers, body, connection, address):
 
 # post请求处理登录请求
 def login(headers, body, connection, address):
-    json_str = body.encode()
+    json_str = body.decode('utf8')
+    json_str
+
     pass
 
 
@@ -80,7 +82,7 @@ def divide(headers, body, connection, address):
     try:
         num1, num2 = int(paras['num1']), int(paras['num1'])
         if num2 == 0:
-            # todo 服务器内部错误，除零错误
+            # todo 服务器内部错误，除零错误 500
             pass
         else:
             result = num1 / num2
