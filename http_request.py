@@ -25,7 +25,6 @@ def pass_request(connection, addr):
             headers = parse_headers(headers_buff)
             body_buff += buf[headers_index + 4:]
             break
-    print(headers)
     # 如果请求方法是post，会有body部分
     if headers['method'] == 'POST':
         content_length = int(headers['headers']['Content-Length'])

@@ -60,8 +60,10 @@ def tcp_link(connection, address):
     # 获得请求头和body
     headers, body = http_request.pass_request(connection, address)
     # todo 业务处理
-
-    # todo 组装response
+    print(headers)
+    print(body)
+    # todo 组装并返回response
+    connection.send('Hello world!'.encode('utf8'))
 
 
 class Server:
