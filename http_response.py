@@ -36,46 +36,47 @@ DEFAULT_ERROR_CONTENT_TYPE = 'text/html;charset=utf-8'
 
 def end_response_header(response):
 	"""
-	结束响应头部
-	:param response:    响应
-	:return:    响应
-	"""
+    结束响应头部
+    :param response: 响应
+    :return: 响应
+    """
 	return response + '\r\n'
 
 
 def add_response_header(header_name, header_value, response):
 	"""
-	为请求增加头部域
-	:param response: 响应
-	:param header_name: 头部域名称
-	:param header_value:  头部域值
-	:return: 响应
-	"""
+    为请求增加头部域
+    :param response: 响应
+    :param header_name: 头部域名称
+    :param header_value:  头部域值
+    :return: 响应
+    """
 	response += '%s: %s\r\n' % (header_name, header_value)
 	return response
 
 
 def generate_response_code(code, msg=None, http_version='HTTP/1.1'):
 	"""
-	响应状态码
-	:param http_version:    HTTP协议版本，默认1.1
-	:param code:    状态码
-	:param msg: 状态描述
-	:return:    状态行信息
-	"""
+    响应状态码
+    :param http_version: HTTP协议版本，默认1.1
+    :param code:    状态码
+    :param msg: 状态描述
+    :return:    状态行信息
+    """
 	status_line = '%s %d %s\r\n' % (http_version, code, msg)
 	return status_line
 
 
 def send_error(code, msg=None, description=None, http_version='HTTP/1.1'):
 	"""
-	当状态码为非200时，返回错误页
-	:param http_version: http协议版本
-	:param code: 状态码
-	:param msg: 状态信息
-	:param description: 状态描述
-	:return: response封装的响应
-	"""
+    当状态码为非200时，返回错误页
+    :param http_version: http协议版本
+    :param code: 状态码
+    :param msg: 状态信息
+    :param description: 状态描述
+    :return: response封装的响应
+    """
+	# 获取与状态码相关的信息
 	try:
 		shortmsg, longmsg = status[code]
 	except KeyError:
@@ -85,8 +86,11 @@ def send_error(code, msg=None, description=None, http_version='HTTP/1.1'):
 	if description is None:
 		description = longmsg
 	response = generate_response_code(code, msg, http_version)
+
+	# 增加头部'Connection'为'close'
 	response = add_response_header('Connection', 'close', response)
 
+	# 处理body，返回相应的错误页信息
 	body = None
 	if (code > 200 and code not in
 			(HTTPStatus.NO_CONTENT, HTTPStatus.RESET_CONTENT, HTTPStatus.NOT_MODIFIED)):
@@ -102,7 +106,22 @@ def send_error(code, msg=None, description=None, http_version='HTTP/1.1'):
 
 	if body:
 		response += '%s' % body
+
 	return response
+
+
+def send_response(headers=None, body=None, http_version='HTTP/1.1'):
+	status_msg = status[200]
+	response = generate_response_code(200, 'OK')
+
+	if headers is not None:
+		if 'Content-Type' not in headers:
+			print('Content-Type')
+			pass
+		if 'Content-Length' not in headers:
+			print('Content-Length')
+			pass
+
 
 
 if __name__ == '__main__':
