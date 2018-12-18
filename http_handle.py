@@ -3,6 +3,7 @@
 # Author     : tangdaye
 # Description: 业务处理部分
 import http_response
+import json
 import os
 
 
@@ -23,8 +24,6 @@ def route(url, method):
     if method == 'POST':
         if url == '/login':
             return login
-        if url == '/upload':
-            return upload
         else:
             # todo 其余的请求只能被get 405
             pass
@@ -63,21 +62,23 @@ def static_resource(headers, body, connection, address):
 # post请求处理登录请求
 def login(headers, body, connection, address):
     json_str = body.decode('utf8')
-    json_str
-
-    pass
-
-
-# post请求处理文件上传请求
-def upload(headers, body, connection, address):
-    pass
+    req = json.loads(json_str)
+    if not req['name'] or not req['password']:
+        # todo 缺少参数 400
+        pass
+    if req['name'] == 'admin' and req['password'] == '123456':
+        s = 'yes'
+        # todo 登陆成功 200
+    else:
+        s = 'no'
+        # todo 登陆失败 200
 
 
 # get请求除以一个数字（可能导致除零出错）
 def divide(headers, body, connection, address):
     paras = headers['paras']
     if not paras['num1'] or not paras['num2']:
-        # todo 正常返回，缺少参数 200
+        # todo 缺少参数 400
         pass
     try:
         num1, num2 = int(paras['num1']), int(paras['num1'])
@@ -88,5 +89,5 @@ def divide(headers, body, connection, address):
             result = num1 / num2
             # todo 正常返回结果 200
     except ValueError:
-        # todo 正常返回，参数有问题 200
+        # todo 参数有问题 400
         pass

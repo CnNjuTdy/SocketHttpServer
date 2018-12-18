@@ -42,8 +42,10 @@ class ThreadPoolManger:
 def tcp_link(connection, address):
     # 获得请求头和body
     headers, body = http_request.pass_request(connection, address)
+    print(headers)
+    print(body)
     # 业务处理
-    http_handle.handle(headers, body, connection, address)
+    # http_handle.handle(headers, body, connection, address)
 
 
 class Server:
