@@ -3,10 +3,13 @@
 # Author     : tangdaye
 # Description: 返回响应部分
 
-# 本server处理的状态码
-from http_status import HTTPStatus
-import html
 
+from http_status import HTTPStatus
+from email import utils
+import html
+import time
+
+# 本server处理的状态码
 status_code = [200, 301, 400, 403, 404, 405, 500]
 status = {
     v: (v.phrase, v.description)
@@ -69,33 +72,27 @@ def generate_response_code(code, msg=None, http_version='HTTP/1.1'):
     return status_line
 
 
-def respond_not_found(connection, headers=None, http_version='HTTP/1.1'):
+def respond_redirect(msg=None, location='/', http_version='HTTP/1.1'):
     '''
-    404 响应
-    :param connection:连接
-    :param headers:已有头部
-    :param http_version:http协议版本
+    301重定向响应
+    :param msg:
+    :param location: 重定向的location
+    :param http_version:
     :return:
     '''
-    response = generate_response_code(404, http_version=http_version)
-    send_error(connection, response, 404, http_version=http_version)
-    return
+    response = generate_response_code(301, msg=msg, http_version=http_version)
+    response = add_response_header('Content-Length', 0, response)
+    response = add_response_header('Location', location, response)
+    response = end_response_header(response)
 
-
-def respond_redirect():
-    # todo 重定向301
-    pass
-
-
-def respond_server_error():
-    # todo 服务器内部错误500
-    pass
+    return response
 
 
 def send_response_full(connection, body, content_type='text/plain; charset=UTF-8', code=200, http_version='HTTP/1.1',
-                       headers=None):
+                       headers=None, connection_status='close'):
     '''
-
+    发送响应
+    :param connection_status: 是否关闭
     :param connection:
     :param http_version:
     :param body:
@@ -107,28 +104,35 @@ def send_response_full(connection, body, content_type='text/plain; charset=UTF-8
     response = generate_response_code(code, http_version=http_version)
     response = add_response_header('Content-Type', content_type, response)
     response = add_response_header('Content-Length', len(body), response)
+    response = add_response_header('Connection', connection_status, response)
+    response = add_response_header('Date', utils.formatdate(time.time(), usegmt=True), response)
 
     if headers is not None:
         for header, value in headers.items():
             response = add_response_header(header, value, response)
     response = end_response_header(response)
 
-    response = bytes(response, encoding='UTF-8') + body
+    response = bytes(response, encoding='UTF-8')
+
+    if body is not None:
+	    response += body
 
     connection.sendall(response)
-    connection.close()
+
+    if connection_status == 'close':
+	    connection.close()
     return
 
 
-def send_error(connection, response, code, msg=None, description=None, http_version='HTTP/1.1'):
+def send_error(connection, code, msg=None, description=None, http_version='HTTP/1.1', location='/'):
     """
     返回错误页
+    :param location:
     :param connection:连接
-    :param response:已有响应部分
     :param http_version: http协议版本
     :param code: 状态码
     :param msg: 状态信息
-    :param description: 状态描述
+    :param description: 错误具体描述
     :return:
     """
     # 获取与状态码相关的信息
@@ -141,8 +145,16 @@ def send_error(connection, response, code, msg=None, description=None, http_vers
     if description is None:
         description = longmsg
 
+    response = ''
+    if code == 301:
+	    response = respond_redirect(msg=msg, location=location, http_version=http_version)
+	    connection.sendall(response)
+	    return
+
+    response = generate_response_code(code, msg=msg, http_version=http_version)
     # 增加头部'Connection'为'close'
     response = add_response_header('Connection', 'close', response)
+    response = add_response_header('Date', utils.formatdate(time.time(), usegmt=True), response)
 
     # 处理body，返回相应的错误页信息
     body = None
@@ -162,7 +174,6 @@ def send_error(connection, response, code, msg=None, description=None, http_vers
     if body:
         response += body
 
-    # print(response)
     connection.sendall(response)
     connection.close()
     return
@@ -193,22 +204,8 @@ def send_error(connection, response, code, msg=None, description=None, http_vers
 '''
 
 
-def send_response(headers=None, body=None, http_version='HTTP/1.1'):
-    status_msg = status[200]
-    response = generate_response_code(200, 'OK', http_version)
-
-    # Todo
-    if headers is not None:
-        if 'Content-Type' not in headers:
-            print('Content-Type')
-            pass
-        if 'Content-Length' not in headers:
-            print('Content-Length')
-            pass
-
-
 if __name__ == '__main__':
     response = generate_response_code(200, 'OK')
     response = add_response_header('Content-Length', '438', response)
     response = end_response_header(response)
-    respond_not_found('')
+    print(utils.formatdate(time.time(), usegmt=True))
