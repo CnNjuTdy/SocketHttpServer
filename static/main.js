@@ -8,7 +8,7 @@ $("#button").click(function (e) {
             $('#result2').html('200 ' + data['result'])
         },
         error: function (error) {
-            $('#result2').html(error.status + error.statusText)
+            $('#result2').html(error.status + ' ' + error.statusText)
         }
     })
 });
@@ -28,7 +28,7 @@ $("#login").click(function (e) {
             $('#result1').html('200 ' + data['result'])
         },
         error: function (error) {
-            $('#result1').html(error.status + error.statusText)
+            $('#result1').html(error.status + ' ' + error.statusText)
         }
     })
 });

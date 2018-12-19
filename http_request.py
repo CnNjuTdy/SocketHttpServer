@@ -28,9 +28,8 @@ def pass_request(connection, addr):
                 headers_buff += buf[:headers_index]
                 try:
                     headers = parse_headers(headers_buff)
-                except ParseRequestError:
-                    # todo 请求出错 400
-                    pass
+                except ParseRequestError as e:
+                    http_response.send_error(connection, code=400, msg='Request Error', description=e.msg)
                 body_buff += buf[headers_index + 4:]
                 break
         except socket.timeout:

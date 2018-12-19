@@ -12,24 +12,25 @@ def handle(headers, body, connection, address):
     method = headers['method']
     print(url)
     print(method)
-    # todo 如果以/结尾，重定向到没有/的请求 301
-    if url[:-1] == '/':
-        pass
-    func = route(url, method)
+    if url[-1] == '/':
+        http_response.send_error(connection, code=301, location=url[:-1])
+    func = route(url, method, connection)
     func(headers, body, connection, address)
 
 
 # 路由选择
-def route(url, method):
+def route(url, method, connection):
     if method == 'POST':
         if url == '/login':
             return login
         else:
-            # todo 其余的请求只能被get 405
+            http_response.send_error(connection, code=405, msg='Method Forbidden',
+                                     description='Path: %s should use method GET' % url)
             pass
     else:
         if url == '/login' or url == '/upload':
-            # todo 这两个请求只能被post 405
+            http_response.send_error(connection, code=405, msg='Method Forbidden',
+                                     description='Path: %s should use method POST' % url)
             pass
         if url == '/divide':
             return divide
@@ -44,13 +45,15 @@ def static_resource(headers, body, connection, address):
     abs_root_path = os.path.abspath(root_path)
     abs_path = os.path.join(abs_root_path, url)
     if not os.path.exists(abs_path):
-        # todo 未找到错误 404
-        pass
+        http_response.send_error(connection, code=404, msg='File not found',
+                                 description='Path: %s not found' % abs_path)
     elif os.path.isdir(abs_path):
-        # todo 目录攻击，禁止访问 403
+        http_response.send_error(connection, code=403, msg='Directory Attack!',
+                                 description='Target resource is a directory!')
         pass
-    elif abs_root_path not in abs_path:
-        # todo 不在规定的目录下，禁止访问 403
+    elif 'private' in abs_path:
+        http_response.send_error(connection, code=403, msg='403 Forbidden',
+                                 description='No authority')
         pass
     else:
         if abs_path[-4:] == 'html':
@@ -72,7 +75,7 @@ def login(headers, body, connection, address):
     json_str = body.decode('utf8')
     req = json.loads(json_str)
     if not req['name'] or not req['password']:
-        # todo 缺少参数 400
+        http_response.send_error(connection, code=400, msg='Need at least two paras')
         pass
     if req['name'] == 'admin' and req['password'] == '123456':
         result = {'result': '登录成功'}
@@ -87,14 +90,12 @@ def login(headers, body, connection, address):
 def divide(headers, body, connection, address):
     paras = headers['paras']
     if not paras['num1'] or not paras['num2']:
-        # todo 缺少参数 400
-        http_response.send_error(connection,)
+        http_response.send_error(connection, code=400, msg='Need at least two paras')
         pass
     try:
         num1, num2 = int(paras['num1']), int(paras['num2'])
         if num2 == 0:
-            # todo 服务器内部错误，除零错误 500
-            pass
+            http_response.send_error(connection, code=500, msg='Sever error')
         else:
             print(num1)
             print(num2)
@@ -103,5 +104,5 @@ def divide(headers, body, connection, address):
                                              body=json.dumps(result, ensure_ascii=False).encode('utf8'),
                                              content_type='application/json', code=200)
     except ValueError:
-        # todo 参数有问题 400
+        http_response.send_error(connection, code=400, msg='Paras have problems')
         pass
