@@ -6,6 +6,7 @@
 </head>
 <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.0/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.0/css/bootstrap-theme.min.css" rel="stylesheet">
+<link rel="stylesheet" href="main.css">
 <body>
 <div class="container">
     <div class="row">
@@ -13,8 +14,43 @@
             <h3>服务器常用功能</h3>
         </div>
     </div>
+    <div class="row">
+        <div class="col-md-12">
+            <h4>图片展示</h4>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <img src="example.jpg" alt="Not found" class="img-thumbnail">
+        </div>
+    </div>
+    <div class="row behind">
+        <div class="col-md-12">
+            <h4>模拟登录功能（POST请求）</h4>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <input type="text" class="form-control" id="username" placeholder="用户名">
+            <input type="password" class="form-control behind2" id="password" placeholder="密码">
+            <button id="login" class="btn btn-default behind2">登录</button>
+        </div>
+    </div>
+    <div class="row behind">
+        <div class="col-md-12">
+            <h4>模拟除法器（GET请求）</h4>
+        </div>
+    </div>
+    <div class="row last_row">
+        <div class="col-md-6">
+            <input class="form-control" type="text" id="num1" placeholder="被除数">
+            <input class="behind2 form-control" type="text" id="num2" placeholder="除数">
+            <button id="button" class="btn btn-default behind2">获得结果</button>
+        </div>
+    </div>
 </div>
 <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://cdn.bootcss.com/twitter-bootstrap/3.4.0/js/bootstrap.min.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
