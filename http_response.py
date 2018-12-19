@@ -9,8 +9,8 @@ import html
 
 status_code = [200, 301, 400, 403, 404, 405, 500]
 status = {
-	v: (v.phrase, v.description)
-	for v in HTTPStatus.__members__.values() if v in status_code
+    v: (v.phrase, v.description)
+    for v in HTTPStatus.__members__.values() if v in status_code
 }
 
 # 默认错误信息页模板
@@ -35,135 +35,137 @@ DEFAULT_ERROR_CONTENT_TYPE = 'text/html;charset=utf-8'
 
 
 def end_response_header(response):
-	"""
-	结束响应头部
-	:param response: 响应
-	:return: 响应
-	"""
-	return response + '\r\n'
+    """
+    结束响应头部
+    :param response: 响应
+    :return: 响应
+    """
+    return response + '\r\n'
 
 
 def add_response_header(header_name, header_value, response):
-	"""
-	为请求增加头部域
-	:param response: 响应
-	:param header_name: 头部域名称
-	:param header_value:  头部域值
-	:return: 响应
-	"""
-	response += '%s: %s\r\n' % (header_name, header_value)
-	return response
+    """
+    为请求增加头部域
+    :param response: 响应
+    :param header_name: 头部域名称
+    :param header_value:  头部域值
+    :return: 响应
+    """
+    response += '%s: %s\r\n' % (header_name, header_value)
+    return response
 
 
 def generate_response_code(code, msg=None, http_version='HTTP/1.1'):
-	"""
-	响应状态码
-	:param http_version: HTTP协议版本，默认1.1
-	:param code:    状态码
-	:param msg: 状态描述
-	:return:    状态行信息
-	"""
-	if msg is None:
-		msg, descr = status[code]
-	status_line = '%s %d %s\r\n' % (http_version, code, msg)
-	return status_line
+    """
+    响应状态码
+    :param http_version: HTTP协议版本，默认1.1
+    :param code:    状态码
+    :param msg: 状态描述
+    :return:    状态行信息
+    """
+    if msg is None:
+        msg, descr = status[code]
+    status_line = '%s %d %s\r\n' % (http_version, code, msg)
+    return status_line
 
 
 def respond_not_found(connection, headers=None, http_version='HTTP/1.1'):
-	'''
-	404 响应
-	:param connection:连接
-	:param headers:已有头部
-	:param http_version:http协议版本
-	:return:
-	'''
-	response = generate_response_code(404, http_version=http_version)
-	send_error(connection, response, 404, http_version=http_version)
-	return
+    '''
+    404 响应
+    :param connection:连接
+    :param headers:已有头部
+    :param http_version:http协议版本
+    :return:
+    '''
+    response = generate_response_code(404, http_version=http_version)
+    send_error(connection, response, 404, http_version=http_version)
+    return
 
 
 def respond_redirect():
-	# todo 重定向301
-	pass
+    # todo 重定向301
+    pass
 
 
 def respond_server_error():
-	# todo 服务器内部错误500
-	pass
+    # todo 服务器内部错误500
+    pass
 
 
 def send_response_full(connection, body, content_type='text/plain; charset=UTF-8', code=200, http_version='HTTP/1.1',
                        headers=None):
-	'''
+    '''
 
-	:param connection:
-	:param http_version:
-	:param body:
-	:param content_type:
-	:param code:
-	:param headers:
-	:return:
-	'''
-	response = generate_response_code(code, http_version=http_version)
-	response = add_response_header('Content-Type', content_type, response)
-	response = add_response_header('Content-Length', len(body), response)
+    :param connection:
+    :param http_version:
+    :param body:
+    :param content_type:
+    :param code:
+    :param headers:
+    :return:
+    '''
+    response = generate_response_code(code, http_version=http_version)
+    response = add_response_header('Content-Type', content_type, response)
+    response = add_response_header('Content-Length', len(body), response)
 
-	if headers is not None:
-		for header, value in headers.items():
-			response = add_response_header(header, value, response)
-	response = end_response_header(response)
+    if headers is not None:
+        for header, value in headers.items():
+            response = add_response_header(header, value, response)
+    response = end_response_header(response)
 
-	response = bytes(response, encoding='UTF-8') + body
+    response = bytes(response, encoding='UTF-8') + body
 
-	connection.sendall(response)
-	return
+    connection.sendall(response)
+    connection.close()
+    return
 
 
 def send_error(connection, response, code, msg=None, description=None, http_version='HTTP/1.1'):
-	"""
-	返回错误页
-	:param connection:连接
-	:param response:已有响应部分
-	:param http_version: http协议版本
-	:param code: 状态码
-	:param msg: 状态信息
-	:param description: 状态描述
-	:return:
-	"""
-	# 获取与状态码相关的信息
-	try:
-		shortmsg, longmsg = status[code]
-	except KeyError:
-		shortmsg, longmsg = '???', '???'
-	if msg is None:
-		msg = shortmsg
-	if description is None:
-		description = longmsg
+    """
+    返回错误页
+    :param connection:连接
+    :param response:已有响应部分
+    :param http_version: http协议版本
+    :param code: 状态码
+    :param msg: 状态信息
+    :param description: 状态描述
+    :return:
+    """
+    # 获取与状态码相关的信息
+    try:
+        shortmsg, longmsg = status[code]
+    except KeyError:
+        shortmsg, longmsg = '???', '???'
+    if msg is None:
+        msg = shortmsg
+    if description is None:
+        description = longmsg
 
-	# 增加头部'Connection'为'close'
-	response = add_response_header('Connection', 'close', response)
+    # 增加头部'Connection'为'close'
+    response = add_response_header('Connection', 'close', response)
 
-	# 处理body，返回相应的错误页信息
-	body = None
-	if (code >= 200 and code not in
-			(HTTPStatus.NO_CONTENT, HTTPStatus.RESET_CONTENT, HTTPStatus.NOT_MODIFIED)):
-		content = (DEFAULT_ERROR_MESSAGE % {
-			'code': code,
-			'message': html.escape(msg, quote=False),
-			'explain': html.escape(description, quote=False)
-		})
-		body = content.encode('UTF-8', 'replace')
-		response = add_response_header('Content-Type', DEFAULT_ERROR_CONTENT_TYPE, response)
-		response = add_response_header('Content-Length', int(len(body)), response)
-	response = end_response_header(response)
+    # 处理body，返回相应的错误页信息
+    body = None
+    if (code >= 200 and code not in
+            (HTTPStatus.NO_CONTENT, HTTPStatus.RESET_CONTENT, HTTPStatus.NOT_MODIFIED)):
+        content = (DEFAULT_ERROR_MESSAGE % {
+            'code': code,
+            'message': html.escape(msg, quote=False),
+            'explain': html.escape(description, quote=False)
+        })
+        body = content.encode('UTF-8', 'replace')
+        response = add_response_header('Content-Type', DEFAULT_ERROR_CONTENT_TYPE, response)
+        response = add_response_header('Content-Length', int(len(body)), response)
+    response = end_response_header(response)
 
-	response = bytes(response, encoding='UTF-8')
-	if body:
-		response += body
+    response = bytes(response, encoding='UTF-8')
+    if body:
+        response += body
 
-	# print(response)
-	connection.sendall(response)
-	return
+    # print(response)
+    connection.sendall(response)
+    connection.close()
+    return
 
 
 '''
@@ -192,21 +194,21 @@ def send_error(connection, response, code, msg=None, description=None, http_vers
 
 
 def send_response(headers=None, body=None, http_version='HTTP/1.1'):
-	status_msg = status[200]
-	response = generate_response_code(200, 'OK', http_version)
+    status_msg = status[200]
+    response = generate_response_code(200, 'OK', http_version)
 
-	# Todo
-	if headers is not None:
-		if 'Content-Type' not in headers:
-			print('Content-Type')
-			pass
-		if 'Content-Length' not in headers:
-			print('Content-Length')
-			pass
+    # Todo
+    if headers is not None:
+        if 'Content-Type' not in headers:
+            print('Content-Type')
+            pass
+        if 'Content-Length' not in headers:
+            print('Content-Length')
+            pass
 
 
 if __name__ == '__main__':
-	response = generate_response_code(200, 'OK')
-	response = add_response_header('Content-Length', '438', response)
-	response = end_response_header(response)
-	respond_not_found('')
+    response = generate_response_code(200, 'OK')
+    response = add_response_header('Content-Length', '438', response)
+    response = end_response_header(response)
+    respond_not_found('')

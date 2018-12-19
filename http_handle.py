@@ -8,10 +8,10 @@ import os
 
 
 def handle(headers, body, connection, address):
-    print(headers)
-    print(body)
     url = headers['url']
     method = headers['method']
+    print(url)
+    print(method)
     # todo 如果以/结尾，重定向到没有/的请求 301
     if url[:-1] == '/':
         pass
@@ -39,12 +39,10 @@ def route(url, method):
 # get请求，请求静态资源，支持：html，js，css，png，jpg
 def static_resource(headers, body, connection, address):
     root_path = './static'
-    url = headers['url']
-    path = os.path.join(root_path, url)
+    url = headers['url'][1:]
     # 绝对地址
     abs_root_path = os.path.abspath(root_path)
-    abs_path = os.path.abspath(path)
-
+    abs_path = os.path.join(abs_root_path, url)
     if not os.path.exists(abs_path):
         # todo 未找到错误 404
         pass
@@ -55,8 +53,18 @@ def static_resource(headers, body, connection, address):
         # todo 不在规定的目录下，禁止访问 403
         pass
     else:
-        # todo 正常返回静态文件 200
-        pass
+        if abs_path[-4:] == 'html':
+            content_type = 'text/html;charset=utf-8'
+        elif abs_path[-2:] == 'js':
+            content_type = 'application/x-javascript'
+        elif abs_path[-3:] == 'css':
+            content_type = 'text/css'
+        elif abs_path[-3:] == 'jpg':
+            content_type = 'image/jpeg'
+        else:
+            content_type = 'text/plain;charset=utf-8'
+        with open(abs_path, 'rb') as f:
+            http_response.send_response_full(connection=connection, body=f.read(), content_type=content_type, code=200)
 
 
 # post请求处理登录请求
@@ -67,11 +75,12 @@ def login(headers, body, connection, address):
         # todo 缺少参数 400
         pass
     if req['name'] == 'admin' and req['password'] == '123456':
-        s = 'yes'
-        # todo 登陆成功 200
+        result = {'result': '登录成功'}
     else:
-        s = 'no'
-        # todo 登陆失败 200
+        result = {'result': '登录失败'}
+    http_response.send_response_full(connection=connection,
+                                     body=json.dumps(result, ensure_ascii=False).encode('utf8'),
+                                     content_type='application/json', code=200)
 
 
 # get请求除以一个数字（可能导致除零出错）
@@ -81,13 +90,17 @@ def divide(headers, body, connection, address):
         # todo 缺少参数 400
         pass
     try:
-        num1, num2 = int(paras['num1']), int(paras['num1'])
+        num1, num2 = int(paras['num1']), int(paras['num2'])
         if num2 == 0:
             # todo 服务器内部错误，除零错误 500
             pass
         else:
-            result = num1 / num2
-            # todo 正常返回结果 200
+            print(num1)
+            print(num2)
+            result = {'result': '结果是' + str(round(num1 / num2, 2))}
+            http_response.send_response_full(connection=connection,
+                                             body=json.dumps(result, ensure_ascii=False).encode('utf8'),
+                                             content_type='application/json', code=200)
     except ValueError:
         # todo 参数有问题 400
         pass

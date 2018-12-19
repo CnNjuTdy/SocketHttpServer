@@ -25,7 +25,7 @@ $("#login").click(function (e) {
             password: password
         }),
         success: function (data) {
-            $('#result2').html('200 ' + data['result'])
+            $('#result1').html('200 ' + data['result'])
         },
         error: function (error) {
             $('#result1').html(error.status + error.statusText)
