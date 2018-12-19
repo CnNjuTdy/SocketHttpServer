@@ -148,7 +148,7 @@ def send_error(connection, code, msg=None, description=None, http_version='HTTP/
     response = ''
     if code == 301:
 	    response = respond_redirect(msg=msg, location=location, http_version=http_version)
-	    connection.sendall(response)
+	    connection.sendall(bytes(response, encoding='UTF-8'))
 	    return
 
     response = generate_response_code(code, msg=msg, http_version=http_version)
