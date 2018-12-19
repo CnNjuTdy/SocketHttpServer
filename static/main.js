@@ -5,10 +5,10 @@ $("#button").click(function (e) {
         url: '/divide?num1=' + num1 + '&num2=' + num2,
         method: 'get',
         success: function (data) {
-            console.log(data)
+            $('#result2').html('200 ' + data['result'])
         },
         error: function (error) {
-            console.log(error)
+            $('#result2').html(error.status + error.statusText)
         }
     })
 });
@@ -25,10 +25,10 @@ $("#login").click(function (e) {
             password: password
         }),
         success: function (data) {
-            console.log(data)
+            $('#result2').html('200 ' + data['result'])
         },
         error: function (error) {
-            console.log(error)
+            $('#result1').html(error.status + error.statusText)
         }
     })
 });
