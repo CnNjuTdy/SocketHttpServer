@@ -88,6 +88,7 @@ def divide(headers, body, connection, address):
     paras = headers['paras']
     if not paras['num1'] or not paras['num2']:
         # todo 缺少参数 400
+        http_response.send_error(connection,)
         pass
     try:
         num1, num2 = int(paras['num1']), int(paras['num2'])

@@ -6,6 +6,7 @@
 from http_error import ParseRequestError
 import http_response
 import urllib.parse
+import socket
 
 
 def pass_request(connection, addr):
@@ -16,20 +17,24 @@ def pass_request(connection, addr):
     body = bytes()
     # 获取headers部分
     while True:
-        buf = connection.recv(1024)
-        if '\r\n\r\n'.encode('utf8') not in buf:
-            # headers部分还没有结束
-            headers_buff += buf
-        else:
-            headers_index = buf.find('\r\n\r\n'.encode('utf8'))
-            headers_buff += buf[:headers_index]
-            try:
-                headers = parse_headers(headers_buff)
-            except ParseRequestError:
-                # todo 请求出错 400
-                pass
-            body_buff += buf[headers_index + 4:]
-            break
+        try:
+            connection.settimeout(600)
+            buf = connection.recv(1024)
+            if '\r\n\r\n'.encode('utf8') not in buf:
+                # headers部分还没有结束
+                headers_buff += buf
+            else:
+                headers_index = buf.find('\r\n\r\n'.encode('utf8'))
+                headers_buff += buf[:headers_index]
+                try:
+                    headers = parse_headers(headers_buff)
+                except ParseRequestError:
+                    # todo 请求出错 400
+                    pass
+                body_buff += buf[headers_index + 4:]
+                break
+        except socket.timeout:
+            connection.close()
     # 如果请求方法是post，会有body部分
     if headers['method'] == 'POST':
         content_length = int(headers['headers']['Content-Length'])
